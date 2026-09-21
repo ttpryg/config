@@ -14,21 +14,21 @@ class ConfigManager
      */
     public static function createFromDirectory(string $directoryPath): ConfigRepository
     {
-        $repository = new ConfigRepository;
-        $repository->loadDir($directoryPath);
+        $configRepository = new ConfigRepository;
+        $configRepository->loadDir($directoryPath);
 
-        return $repository;
+        return $configRepository;
     }
 
     /**
      * Create a ConfigRepository instance pre-loaded from a database driver.
      */
-    public static function createFromDatabase(DatabaseDriverInterface $driver, ?ConfigEncryptor $encryptor = null): ConfigRepository
+    public static function createFromDatabase(DatabaseDriverInterface $databaseDriver, ?ConfigEncryptor $configEncryptor = null): ConfigRepository
     {
-        $repository = new ConfigRepository([], $encryptor);
-        $repository->loadDatabase($driver);
+        $configRepository = new ConfigRepository([], $configEncryptor);
+        $configRepository->loadDatabase($databaseDriver);
 
-        return $repository;
+        return $configRepository;
     }
 
     /**

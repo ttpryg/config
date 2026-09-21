@@ -112,8 +112,10 @@ Requires the PHP `openssl` extension (enabled by default in most PHP installatio
 ```php
 use Ttpryg\Config\ConfigManager;
 use Ttpryg\Config\ConfigRepository;
+use Ttpryg\Config\Drivers\PdoDatabaseDriver;
 use Ttpryg\Config\Encryption\ConfigEncryptor;
 
+$dbDriver = new PdoDatabaseDriver(new PDO('mysql:host=localhost;dbname=slim_db', 'root', 'password'), 'configs');
 $encryptor = new ConfigEncryptor('your-app-secret-key');
 
 // Save with encrypted values
@@ -127,6 +129,9 @@ $dbConfig = ConfigManager::createFromDatabase($dbDriver, $encryptor);
 $stripeSecret = $dbConfig->get('stripe.secret'); // "sk_live_..."
 ```
 
+How it behaves:
+
 - Encrypted rows are stored with the `enc:v1:` marker prefix so they are auto-detected and decrypted on load.
-- Existing plain (legacy) rows remain readable — only values with the marker are decrypted.
-- Loading without an encryptor yields the raw encrypted strings untouched.
+- Unencrypted (plain / legacy) rows remain fully readable — decryption only triggers on the `enc:v1:` marker, so old data and rows written without an encryptor still load normally.
+- A repository constructed without an encryptor keeps the original behavior: values are persisted as plain strings, no encryption is applied.
+- Loading with an encryptor but without the correct key throws a `RuntimeException` (`Failed to decrypt config value`) so wrong keys are not silently ignored.

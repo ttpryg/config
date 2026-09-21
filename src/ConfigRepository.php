@@ -129,9 +129,9 @@ class ConfigRepository implements ArrayAccess, ConfigInterface
         }
     }
 
-    public function loadDatabase(DatabaseDriverInterface $driver): void
+    public function loadDatabase(DatabaseDriverInterface $databaseDriver): void
     {
-        $rows = $driver->all();
+        $rows = $databaseDriver->all();
         foreach ($rows as $key => $rawValue) {
             if ($this->encryptor instanceof ConfigEncryptor && $this->encryptor->isEncrypted($rawValue)) {
                 $rawValue = $this->encryptor->decrypt($rawValue);
@@ -142,19 +142,19 @@ class ConfigRepository implements ArrayAccess, ConfigInterface
         }
     }
 
-    public function saveToDatabase(DatabaseDriverInterface $driver, ?string $key = null): void
+    public function saveToDatabase(DatabaseDriverInterface $databaseDriver, ?string $key = null): void
     {
         if ($key !== null) {
             $value = $this->get($key);
             $encodedValue = $this->encodeValue($value);
-            $driver->set($key, $encodedValue);
+            $databaseDriver->set($key, $encodedValue);
 
             return;
         }
 
         foreach ($this->items as $itemKey => $value) {
             $encodedValue = $this->encodeValue($value);
-            $driver->set($itemKey, $encodedValue);
+            $databaseDriver->set($itemKey, $encodedValue);
         }
     }
 

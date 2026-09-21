@@ -12,20 +12,20 @@ class ConfigEncryptorTest extends TestCase
 {
     public function test_encrypt_and_decrypt_round_trip(): void
     {
-        $encryptor = new ConfigEncryptor('my-secret-key');
+        $configEncryptor = new ConfigEncryptor('my-secret-key');
 
-        $ciphertext = $encryptor->encrypt('My Awesome Site');
+        $ciphertext = $configEncryptor->encrypt('My Awesome Site');
 
         $this->assertNotSame('My Awesome Site', $ciphertext);
-        $this->assertTrue($encryptor->isEncrypted($ciphertext));
+        $this->assertTrue($configEncryptor->isEncrypted($ciphertext));
         $this->assertStringStartsWith(ConfigEncryptor::MARKER, $ciphertext);
-        $this->assertSame('My Awesome Site', $encryptor->decrypt($ciphertext));
+        $this->assertSame('My Awesome Site', $configEncryptor->decrypt($ciphertext));
     }
 
     public function test_decrypt_with_wrong_key_throws(): void
     {
-        $encryptor = new ConfigEncryptor('secret-a');
-        $ciphertext = $encryptor->encrypt('secrets');
+        $configEncryptor = new ConfigEncryptor('secret-a');
+        $ciphertext = $configEncryptor->encrypt('secrets');
 
         $this->expectException(RuntimeException::class);
 
@@ -41,9 +41,9 @@ class ConfigEncryptorTest extends TestCase
 
     public function test_is_encrypted_detects_plain_value(): void
     {
-        $encryptor = new ConfigEncryptor('secret');
+        $configEncryptor = new ConfigEncryptor('secret');
 
-        $this->assertFalse($encryptor->isEncrypted('plain-value'));
-        $this->assertTrue($encryptor->isEncrypted(ConfigEncryptor::MARKER.'abc'));
+        $this->assertFalse($configEncryptor->isEncrypted('plain-value'));
+        $this->assertTrue($configEncryptor->isEncrypted(ConfigEncryptor::MARKER.'abc'));
     }
 }
