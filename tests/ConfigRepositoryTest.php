@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Ttpryg\Config\ConfigManager;
 use Ttpryg\Config\ConfigRepository;
 use Ttpryg\Config\Drivers\PdoDatabaseDriver;
+use Ttpryg\Config\Encryption\ConfigEncryptor;
 
 class ConfigRepositoryTest extends TestCase
 {
@@ -75,5 +76,43 @@ class ConfigRepositoryTest extends TestCase
         $this->assertEquals('My Awesome Site', $loadedConfig->get('site.name'));
         $this->assertFalse($loadedConfig->get('site.maintenance'));
         $this->assertEquals(3600, $loadedConfig->get('jwt_ttl'));
+    }
+
+    public function test_database_driver_save_and_load_with_encryption(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $driver = new PdoDatabaseDriver($pdo, 'app_configs');
+        $encryptor = new ConfigEncryptor('app-secret-key');
+
+        $config = new ConfigRepository([
+            'site' => [
+                'name' => 'My Awesome Site',
+                'maintenance' => false,
+            ],
+            'jwt_ttl' => 3600,
+        ], $encryptor);
+
+        $config->saveToDatabase($driver);
+
+        $storedRows = $driver->all();
+        $this->assertStringStartsWith(ConfigEncryptor::MARKER, $storedRows['site']);
+        $this->assertNotSame('{"name":"My Awesome Site","maintenance":false}', $storedRows['site']);
+
+        $loadedConfig = ConfigManager::createFromDatabase($driver, $encryptor);
+
+        $this->assertEquals('My Awesome Site', $loadedConfig->get('site.name'));
+        $this->assertFalse($loadedConfig->get('site.maintenance'));
+        $this->assertEquals(3600, $loadedConfig->get('jwt_ttl'));
+    }
+
+    public function test_database_load_legacy_plain_values_still_work(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $driver = new PdoDatabaseDriver($pdo, 'app_configs');
+        $driver->set('legacy_key', 'legacy-value');
+
+        $loadedConfig = ConfigManager::createFromDatabase($driver, new ConfigEncryptor('app-secret-key'));
+
+        $this->assertEquals('legacy-value', $loadedConfig->get('legacy_key'));
     }
 }

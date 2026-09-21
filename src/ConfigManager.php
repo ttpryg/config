@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ttpryg\Config;
 
 use Ttpryg\Config\Drivers\DatabaseDriverInterface;
+use Ttpryg\Config\Encryption\ConfigEncryptor;
 
 class ConfigManager
 {
@@ -22,9 +23,9 @@ class ConfigManager
     /**
      * Create a ConfigRepository instance pre-loaded from a database driver.
      */
-    public static function createFromDatabase(DatabaseDriverInterface $driver): ConfigRepository
+    public static function createFromDatabase(DatabaseDriverInterface $driver, ?ConfigEncryptor $encryptor = null): ConfigRepository
     {
-        $repository = new ConfigRepository;
+        $repository = new ConfigRepository([], $encryptor);
         $repository->loadDatabase($driver);
 
         return $repository;
