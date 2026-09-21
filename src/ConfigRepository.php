@@ -7,13 +7,17 @@ namespace Ttpryg\Config;
 use ArrayAccess;
 use InvalidArgumentException;
 use Ttpryg\Config\Drivers\DatabaseDriverInterface;
+use Ttpryg\Config\Encryption\ConfigEncryptor;
 
 class ConfigRepository implements ArrayAccess, ConfigInterface
 {
     /**
      * @param  array<string, mixed>  $items
      */
-    public function __construct(protected array $items = []) {}
+    public function __construct(
+        protected array $items = [],
+        protected ?ConfigEncryptor $encryptor = null
+    ) {}
 
     public function get(string $key, mixed $default = null): mixed
     {
@@ -125,28 +129,32 @@ class ConfigRepository implements ArrayAccess, ConfigInterface
         }
     }
 
-    public function loadDatabase(DatabaseDriverInterface $driver): void
+    public function loadDatabase(DatabaseDriverInterface $databaseDriver): void
     {
-        $rows = $driver->all();
+        $rows = $databaseDriver->all();
         foreach ($rows as $key => $rawValue) {
+            if ($this->encryptor instanceof ConfigEncryptor && $this->encryptor->isEncrypted($rawValue)) {
+                $rawValue = $this->encryptor->decrypt($rawValue);
+            }
+
             $decodedValue = $this->decodeValue($rawValue);
             $this->set($key, $decodedValue);
         }
     }
 
-    public function saveToDatabase(DatabaseDriverInterface $driver, ?string $key = null): void
+    public function saveToDatabase(DatabaseDriverInterface $databaseDriver, ?string $key = null): void
     {
         if ($key !== null) {
             $value = $this->get($key);
-            $encodedValue = is_array($value) || is_object($value) ? json_encode($value) : (string) $value;
-            $driver->set($key, $encodedValue);
+            $encodedValue = $this->encodeValue($value);
+            $databaseDriver->set($key, $encodedValue);
 
             return;
         }
 
         foreach ($this->items as $itemKey => $value) {
-            $encodedValue = is_array($value) || is_object($value) ? json_encode($value) : (string) $value;
-            $driver->set($itemKey, $encodedValue);
+            $encodedValue = $this->encodeValue($value);
+            $databaseDriver->set($itemKey, $encodedValue);
         }
     }
 
@@ -170,6 +178,17 @@ class ConfigRepository implements ArrayAccess, ConfigInterface
     public function offsetUnset(mixed $offset): void
     {
         $this->forget((string) $offset);
+    }
+
+    private function encodeValue(mixed $value): string
+    {
+        $encodedValue = is_array($value) || is_object($value) ? json_encode($value) : (string) $value;
+
+        if ($this->encryptor instanceof ConfigEncryptor) {
+            return $this->encryptor->encrypt($encodedValue);
+        }
+
+        return $encodedValue;
     }
 
     private function decodeValue(mixed $value): mixed

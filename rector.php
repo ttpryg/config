@@ -15,6 +15,8 @@ return RectorConfig::configure()
         SetList::DEAD_CODE,
         SetList::CODE_QUALITY,
         SetList::CODING_STYLE,
+        SetList::NAMING,
+        SetList::TYPE_DECLARATION,
         LevelSetList::UP_TO_PHP_81,
     ])
     ->withSkip([

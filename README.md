@@ -8,6 +8,7 @@ A lightweight, standalone PHP configuration management library featuring dot-not
 - **Directory Auto-loader**: Automatically load all `.php` configuration files in a directory into key-partitioned arrays.
 - **Database Storage & Persistence**: Load and save configuration directly to a database table via PDO driver (`PdoDatabaseDriver`) or custom drivers.
 - **Zero External Runtime Dependencies**: Self-contained with zero external dependencies, easily portable across projects or published as a standalone composer package.
+- **Optional Value Encryption**: Persist config values to the database encrypted with OpenSSL AES-256-GCM (`ConfigEncryptor`), kept plain in memory.
 
 ## Package Structure (Composerable)
 
@@ -19,11 +20,14 @@ ttpryg/config/
 │   ├── ConfigInterface.php
 │   ├── ConfigRepository.php
 │   ├── ConfigManager.php
+│   ├── Encryption/
+│   │   └── ConfigEncryptor.php
 │   └── Drivers/
 │       ├── DatabaseDriverInterface.php
 │       └── PdoDatabaseDriver.php
 └── tests/
-    └── ConfigRepositoryTest.php
+    ├── ConfigRepositoryTest.php
+    └── ConfigEncryptorTest.php
 ```
 
 ## How to Reuse in Another Repository
@@ -98,3 +102,36 @@ $config->saveToDatabase($dbDriver);
 $dbConfig = ConfigManager::createFromDatabase($dbDriver);
 $siteName = $dbConfig->get('site.name');
 ```
+
+## Optional Value Encryption
+
+Encrypt config values at rest in the database using OpenSSL AES-256-GCM. Values are kept plain in memory and only encrypted when persisted via `saveToDatabase()`.
+
+Requires the PHP `openssl` extension (enabled by default in most PHP installations).
+
+```php
+use Ttpryg\Config\ConfigManager;
+use Ttpryg\Config\ConfigRepository;
+use Ttpryg\Config\Drivers\PdoDatabaseDriver;
+use Ttpryg\Config\Encryption\ConfigEncryptor;
+
+$dbDriver = new PdoDatabaseDriver(new PDO('mysql:host=localhost;dbname=slim_db', 'root', 'password'), 'configs');
+$encryptor = new ConfigEncryptor('your-app-secret-key');
+
+// Save with encrypted values
+$config = new ConfigRepository([
+    'stripe' => ['secret' => 'sk_live_...'],
+], $encryptor);
+$config->saveToDatabase($dbDriver);
+
+// Load and decrypt with the same key
+$dbConfig = ConfigManager::createFromDatabase($dbDriver, $encryptor);
+$stripeSecret = $dbConfig->get('stripe.secret'); // "sk_live_..."
+```
+
+How it behaves:
+
+- Encrypted rows are stored with the `enc:v1:` marker prefix so they are auto-detected and decrypted on load.
+- Unencrypted (plain / legacy) rows remain fully readable — decryption only triggers on the `enc:v1:` marker, so old data and rows written without an encryptor still load normally.
+- A repository constructed without an encryptor keeps the original behavior: values are persisted as plain strings, no encryption is applied.
+- Loading with an encryptor but without the correct key throws a `RuntimeException` (`Failed to decrypt config value`) so wrong keys are not silently ignored.

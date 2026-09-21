@@ -22,7 +22,7 @@ interface ConfigInterface
 
     public function loadDir(string $directoryPath): void;
 
-    public function loadDatabase(DatabaseDriverInterface $driver): void;
+    public function loadDatabase(DatabaseDriverInterface $databaseDriver): void;
 
-    public function saveToDatabase(DatabaseDriverInterface $driver, ?string $key = null): void;
+    public function saveToDatabase(DatabaseDriverInterface $databaseDriver, ?string $key = null): void;
 }
