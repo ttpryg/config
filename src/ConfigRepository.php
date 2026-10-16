@@ -114,7 +114,9 @@ class ConfigRepository implements ArrayAccess, ConfigInterface
         }
 
         $key = pathinfo($filePath, PATHINFO_FILENAME);
-        $this->set($key, array_merge((array) $this->get($key, []), $configData));
+        $existing = $this->get($key, []);
+        $merged = is_array($existing) ? array_replace_recursive($existing, $configData) : $configData;
+        $this->set($key, $merged);
     }
 
     public function loadDir(string $directoryPath): void
@@ -182,7 +184,11 @@ class ConfigRepository implements ArrayAccess, ConfigInterface
 
     private function encodeValue(mixed $value): string
     {
-        $encodedValue = is_array($value) || is_object($value) ? json_encode($value) : (string) $value;
+        $encodedValue = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        if ($encodedValue === false) {
+            throw new InvalidArgumentException('Failed to JSON encode config value: '.json_last_error_msg());
+        }
 
         if ($this->encryptor instanceof ConfigEncryptor) {
             return $this->encryptor->encrypt($encodedValue);

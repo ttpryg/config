@@ -25,7 +25,7 @@ class ConfigEncryptor
 
     public function encrypt(string $plaintext): string
     {
-        $iv = openssl_random_pseudo_bytes(self::IV_LENGTH);
+        $iv = random_bytes(self::IV_LENGTH);
         $tag = '';
 
         $ciphertext = openssl_encrypt(
