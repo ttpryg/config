@@ -93,7 +93,13 @@ $config = ConfigManager::createFromDirectory(__DIR__ . '/config');
 
 // Method 3: Database Storage (PDO Driver)
 $pdo = new PDO('mysql:host=localhost;dbname=slim_db', 'root', 'password');
+
+// Default: autoCreateTable = true (convenient for development / testing)
 $dbDriver = new PdoDatabaseDriver($pdo, 'configs');
+
+// In production, you can disable automatic runtime DDL and manage the schema via migrations:
+$dbDriver = new PdoDatabaseDriver($pdo, 'configs', autoCreateTable: false);
+// Call $dbDriver->ensureTableExists() once in your migration or setup script.
 
 // Save config to database
 $config->saveToDatabase($dbDriver);
